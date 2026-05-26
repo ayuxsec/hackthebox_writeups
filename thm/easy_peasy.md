@@ -1,3 +1,5 @@
+https://medium.com/@abubakr.ezalden.nasir/easy-peasy-dbc35ba1cd91
+
 nmap commnad used:
 
 ```
