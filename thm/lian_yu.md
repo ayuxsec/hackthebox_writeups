@@ -1,5 +1,11 @@
 - https://7s26simon.wordpress.com/2020/05/23/lian-yu-write-up/
 
+gobuster command to fuzz:
+
+```
+gobuster dir -u 10.10.13.232/island -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
+```
+
 after downloading files from ftp the header from `leave_me_alone.png` was wrong
 
 ```
