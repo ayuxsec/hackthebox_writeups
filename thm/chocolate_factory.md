@@ -10,7 +10,7 @@ b'-VkgXhFf6sAEcAwrC6YR-SZbiuSb8ABXeQuvhcGSQzY='
 
 root.py
 
-```
+```python
 from cryptography.fernet import Fernet
 import pyfiglet
 key=input("Enter the key:  ")
@@ -26,7 +26,7 @@ print(display2)
 
 directly adding the key from `input` function wasn't working so i wrote a similar program with same encrypted mess and hardcoded key
 
-```
+```python
 from cryptography.fernet import Fernet
 
 key = b"-VkgXhFf6sAEcAwrC6YR-SZbiuSb8ABXeQuvhcGSQzY="
