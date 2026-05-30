@@ -1,6 +1,6 @@
 mistakes: 
 
-1.email had domain support@mafialive.thm and mafialive.thm was a target host
+1.email had domain support@mafialive.thm and mafialive.thm was a target host</br>
 2. corrupted the log file too early with invalid php which lead to 500 errors when accessing apache2 access log files 
 
 ```
