@@ -1,1 +1,1 @@
-- [logi](./log_injection.md)
+- [log poison](./log_poison.md)
