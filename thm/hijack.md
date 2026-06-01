@@ -15,7 +15,7 @@ Export list for 10.49.140.144:
                   
 $ sudo mount -t nfs 10.49.140.144:/mnt/share /tmp/share
 
-# ls -la /tmp | grep nfs 
+# ls -la /tmp/nfs
 drwx------  2 1003 1003 4096 Aug  8  2023 nfs # only the user nfs with uid 1003 allowed to view stuffs
 
 # useradd -u 1003 nfs
