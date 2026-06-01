@@ -38,7 +38,7 @@ i came up with a safe list of passwords that you all can use on the site, these 
 NOTE To rick : good job on limiting login attempts, it works like a charm, this will prevent any future brute forcing.
 ```
 
-session cookie was base64 encode in user:password format fuzzed it with
+session cookie was base64 encode in `user:<md5_password>` format fuzzed it with
 
 ```py
 import requests, hashlib, base64
