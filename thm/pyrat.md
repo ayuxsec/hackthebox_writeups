@@ -107,7 +107,7 @@ admin
 Start a fresh client to begin.
 ^C
 
-$nc 10.48.143.146 8000 -v
+$ nc 10.48.143.146 8000 -v
 Connection to 10.48.143.146 8000 port [tcp/*] succeeded!
 admin
 Password:
