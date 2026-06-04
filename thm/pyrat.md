@@ -94,7 +94,7 @@ def shell(client_socket):
 ...............................................
 ```
 
-looks like it's looking for some special endpoint first then running `get_this_endpoint` function. Note the check is `if data == 'some_endpoint':` not `/some_endpoint` instead of fuzzing first i tried some random endoints and `/admin` worked:
+looks like it's looking for some special endpoint first then running `get_this_endpoint` function. Note the check is `if data == 'some_endpoint':` not `/some_endpoint` instead of fuzzing first i tried some random endoints and `admin` worked:
 
 ```console
 $ nc 10.48.143.146 8000 -v
