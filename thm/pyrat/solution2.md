@@ -50,6 +50,9 @@ print(type(admins))
 
 print(admins)
 []
+
+print(locals())
+{'client_socket': <socket.socket fd=7, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('10.48.161.164', 8000), raddr=('192.168.247.244', 51892)>, 'data': 'print(locals())', 'captured_output': <_io.StringIO object at 0x7fa838419430>}
 ```
 
 interesting admins is just an empty list. theory:
