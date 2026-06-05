@@ -78,7 +78,7 @@ print(admins);
 ^C
 ```
 
-then make sure to connect with the same port
+then make sure to connect with the same port quickly
 
 ```
 $ sudo ncat 10.49.164.56 8000 --source-port 50072
