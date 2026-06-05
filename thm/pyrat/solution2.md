@@ -87,7 +87,7 @@ shell
 root
 ```
 
-Note: the file descriptor our os would assign to the socket opened by ncat could change than what we appended to admins list in nc session and you will get normal shell in that case so it's better to first get the value of `socket_client` string then copy and loop through to append like `1-100` fds so it would match eitherway. something like 
+Note: the file descriptor our os would assign to the socket opened by ncat could change than what we appended to admins list in nc session and you will get normal shell in that case so it's better to first get the value of `socket_client` string then copy and loop through to append like `1-100` fds so it would match eitherway.
 
 i.e.
 
