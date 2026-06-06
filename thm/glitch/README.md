@@ -569,7 +569,6 @@ drwx------   2 user user  4096 Jan 21  2021 .ssh
 `.firefox` could have other users password
 
 ```
-$ rm firefox.zip
 $ zip firefox.zip .firefox
 sh: 4: zip: not found
 $ tar -czf firefox.tar.gz .firefox
